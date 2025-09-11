@@ -32,16 +32,20 @@ export class AuthGuard implements CanActivate {
     // Extract token from Authorization header
     const authHeader = request.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Missing or invalid authorization header:', authHeader);
       throw new UnauthorizedException('Missing or invalid authorization header');
     }
 
     const token = authHeader.substring(7);
+    console.log('Extracted token:', token.substring(0, 20) + '...');
 
     try {
       // Verify JWT token
       const payload = await this.jwtService.verifyAsync(token, {
         secret: config.SUPABASE_JWT_SECRET,
       });
+
+      console.log('Token payload:', payload);
 
       const user: AuthUser = {
         id: payload.sub,
@@ -54,11 +58,13 @@ export class AuthGuard implements CanActivate {
 
       // Check role authorization if required
       if (requiredRoles && !requiredRoles.includes(user.role)) {
+        console.log('Role mismatch. Required:', requiredRoles, 'User role:', user.role);
         throw new ForbiddenException(`Required roles: ${requiredRoles.join(', ')}`);
       }
 
       return true;
     } catch (error) {
+      console.error('JWT verification failed:', error.message);
       if (error instanceof ForbiddenException) {
         throw error;
       }

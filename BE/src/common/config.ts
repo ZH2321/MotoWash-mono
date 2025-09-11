@@ -74,6 +74,9 @@ try {
   }
 
   console.log('✅ Configuration loaded successfully');
+  console.log('Backend URL:', config.BACKEND_BASE_URL);
+  console.log('Frontend Origin:', config.FRONTEND_ORIGIN);
+  console.log('JWT Secret configured:', !!config.SUPABASE_JWT_SECRET);
 } catch (error: any) {
   console.error('❌ Configuration validation failed:', error.message);
   process.exit(1);

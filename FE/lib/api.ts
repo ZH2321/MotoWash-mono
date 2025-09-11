@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_BASE_URL,
+  timeout: 10000,
 });
 
 // Request interceptor to add auth token
@@ -10,6 +11,9 @@ api.interceptors.request.use((config) => {
     const token = localStorage.getItem('app_jwt') || sessionStorage.getItem('liff_jwt');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Adding auth token to request:', config.url, token.substring(0, 20) + '...');
+    } else {
+      console.log('No auth token found for request:', config.url);
     }
   }
   return config;
@@ -19,14 +23,25 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error('API Error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message: error.response?.data?.message || error.message,
+      headers: error.config?.headers,
+    });
+
     if (error.response?.status === 401) {
       // Handle unauthorized
       if (typeof window !== 'undefined') {
+        console.log('401 Unauthorized - clearing tokens and redirecting');
         localStorage.removeItem('app_jwt');
         sessionStorage.removeItem('liff_jwt');
         
         if (window.location.pathname.startsWith('/admin')) {
           window.location.href = '/admin/login';
+        } else if (window.location.pathname.startsWith('/liff')) {
+          // For LIFF routes, try to re-initialize LIFF
+          window.location.reload();
         }
       }
     }

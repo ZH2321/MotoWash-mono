@@ -10,7 +10,7 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter({
       logger: {
-        level: 'info',
+        level: 'debug',
       },
     }),
   );
@@ -24,6 +24,15 @@ async function bootstrap() {
     }),
   );
 
+  // Add request logging middleware
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`, {
+      headers: req.headers,
+      body: req.method !== 'GET' ? req.body : undefined,
+    });
+    next();
+  });
+
   // Register CORS
   function parseOrigins(v?: string | string[]) {
     if (Array.isArray(v)) return v;
@@ -35,7 +44,12 @@ async function bootstrap() {
 
   const envAllowed = parseOrigins(process.env.ALLOWED_ORIGINS);
   if (process.env.FRONTEND_ORIGIN) envAllowed.push(process.env.FRONTEND_ORIGIN.trim());
+  // Add localhost for development
+  envAllowed.push('http://localhost:3000');
+  envAllowed.push('http://127.0.0.1:3000');
   const allowSet = new Set(envAllowed);
+
+  console.log('Allowed CORS origins:', Array.from(allowSet));
 
   await app.register(cors, {
     origin: (origin, cb) => {
@@ -57,8 +71,10 @@ async function bootstrap() {
         }
 
         // ถ้าจะเพิ่มโดเมนโปรดักชัน ให้เช็กตรงนี้เพิ่มได้
+        console.log('CORS rejected origin:', origin);
         return cb(new Error(`Not allowed by CORS: ${origin}`), false);
       } catch {
+        console.log('Invalid origin format:', origin);
         return cb(new Error('Invalid Origin'), false);
       }
     },
